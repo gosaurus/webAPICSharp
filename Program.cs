@@ -17,6 +17,7 @@ var connectionString =
     builder.Configuration.GetConnectionString("DefaultConnection") 
     ?? throw new InvalidOperationException("Connection string" + 
     "'Default Connection' not found in appsettings.json");
+    
 builder.Services.AddDbContext<WeatherDbContext>(options => options.UseSqlite(connectionString));
 
 var app = builder.Build();

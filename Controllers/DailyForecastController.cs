@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using webAPICSharp.Models;
+using webAPICSharp.Utils;
 
 namespace webAPICSharp.Controllers;
 
@@ -21,11 +23,30 @@ public class DailyForecastController : ControllerBase
         _context = context;
     }
 
-    [HttpGet(Name = "GetAllForecasts")]
-    public IEnumerable<DailyForecast> Get()
+    [HttpGet(Name = "PaginatedForecasts")]
+    public async Task<ActionResult<IEnumerable<DailyForecast>>> Get
+    (
+        [FromQuery] QueryParameters queryParameters
+    )
     {
+        var allForecasts = 
+            await _context.DailyForecasts
+            .OrderByDescending(dailyForecast => dailyForecast.Id)
+            .Skip((queryParameters.pageNumber - 1) * queryParameters.pageSize)
+            .Take(queryParameters.pageSize)
+            .ToListAsync();
 
-        return _context.DailyForecasts;
+        var forecastCount = await _context.DailyForecasts.CountAsync();
+        var response = new
+        {
+            TotalDays = forecastCount,
+            PageSize = queryParameters.pageSize,
+            PageNumber = queryParameters.pageNumber,
+            Results = allForecasts
+
+        };
+
+        return Ok(response);
     }
     
     [HttpGet("{id}")]
@@ -35,7 +56,7 @@ public class DailyForecastController : ControllerBase
             .FirstOrDefaultAsync(forecast => forecast.Id == id);
         if (theForecast == null)
         {
-            return NotFound(theForecast);
+            return NotFound();
         }
         return Ok(theForecast);
     }
@@ -53,4 +74,5 @@ public class DailyForecastController : ControllerBase
         await _context.SaveChangesAsync();
         return CreatedAtAction(nameof(GetForecast), new { id = dailyForecast.Id }, dailyForecast);
     }
+
 }
